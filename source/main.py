@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from PySide6.QtWidgets import QApplication
 from core.database import DatabaseManager
 from core.plugin_manager import PluginManager
@@ -6,6 +6,10 @@ from core.data_exporter import DataExchangeManager
 from core.api_client import CallsignLookupManager
 from core.geo_math import GeoMath
 from gui.main_window import MainWindow
+
+if getattr(sys, 'frozen', False):
+    # Allows external loose .py plugins to import packages bundled inside the EXE
+    sys.path.append(sys._MEIPASS)
 
 class ApplicationContext:
     def __init__(self, home_grid="EN53"):
