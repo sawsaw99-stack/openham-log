@@ -4,3 +4,6 @@
 # Ignore Python bytecode and cache directories
 __pycache__/
 *.py[cod]
+
+#Ignore the SPEC files created by building
+*.spec
