@@ -1,7 +1,8 @@
 import sys
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
-                             QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox)
+                             QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
+                             QInputDialog)
 from PySide6.QtCore import Qt
 from core.database import DatabaseManager
 from core.api_client import CallsignLookupManager
@@ -79,7 +80,28 @@ class MainWindow(QMainWindow):
 
         # Load initial data from SQLite & trigger UI Plugin initialization
         self.refresh_log_table()
+        self.ensure_home_station()
         self.app.plugin_manager.trigger_hook("on_ui_init", self)
+
+    def ensure_home_station(self):
+        """Prompt once for the user's callsign so real-distance math has a home reference."""
+        if self.app.home_callsign and self.app.home_lat is not None and self.app.home_lon is not None:
+            return
+
+        default_value = self.app.settings_manager.load_callsign()
+        callsign, ok = QInputDialog.getText(
+            self,
+            "Set Your Station Callsign",
+            "Enter your callsign to calculate real home-to-station distances:",
+            text=default_value
+        )
+
+        if ok and callsign.strip():
+            self.app.refresh_home_location(callsign)
+            self.telemetry_label.setText(
+                f"<b>Home Station:</b> {self.app.home_callsign}<br>"
+                f"<b>Reference Grid:</b> {self.app.home_grid}"
+            )
 
     def handle_lookup(self):
         """Runs an automatic background API check as soon as callsign field is exited."""
