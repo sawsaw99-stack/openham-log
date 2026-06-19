@@ -1,15 +1,26 @@
-import sqlite3
 import os
-from datetime import datetime
+import sys
+import sqlite3
 
 class DatabaseManager:
     def __init__(self, db_name="ham_log.db"):
-        self.db_name = db_name
-        self.init_db()
+        # Resolve the folder where the app is executing
+        if getattr(sys, 'frozen', False):
+            # Running as a compiled installer .exe
+            app_dir = os.path.dirname(sys.executable)
+        else:
+            # Running during development in your source tree
+            app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            
+        self.db_path = os.path.join(app_dir, db_name)
+            
+        try:
+            self.init_db()
+        except sqlite3.Error as e:
+            raise DatabaseInitializationError(f"Database storage failed to initialize: {e}")
 
     def _get_connection(self):
-        """Returns a connection to the SQLite database."""
-        return sqlite3.connect(self.db_name)
+        return sqlite3.connect(self.db_path)
 
     def init_db(self):
         """Creates the QSO table if it doesn't exist yet."""

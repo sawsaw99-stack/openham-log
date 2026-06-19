@@ -1,28 +1,32 @@
 [Setup]
-AppName=OpenHam Logger 0.2.3
-AppVersion=0.2.3
-DefaultDirName={autopf}\OpenHam_0.2.3
-DefaultGroupName=
-OutputDir=.
-OutputBaseFilename=OpenHam_0.2.3_Setup
+AppName=OpenHam Logger
+AppVersion=0.2.4
+DefaultDirName={autopf}\OpenHam
+DefaultGroupName=OpenHam
+OutputDir=.\releases
+OutputBaseFilename=OpenHam_Setup
 Compression=lzma
 SolidCompression=yes
 
 [Files]
 ; 1. Copy the main executable
-Source: "dist\OpenHam Logger 0.2.3\OpenHam Logger 0.2.3.exe"; DestDir: "{app}"; Flags: ignoreversion
-; 2. Copy all support DLLs, assets, and folders inside the dist folder
-Source: "dist\OpenHam Logger 0.2.3\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\OpenHam Logger 0.2.4\OpenHam_Logger.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+; 2. CRITICAL: Bundle your starter/template database file into the installation folder!
+; 'uninsneveruninstall' ensures that if the user updates or uninstalls the app later, 
+; Inno Setup won't delete their hard-earned ham radio logs!
+Source: "source\ham_log.db"; DestDir: "{app}"; Flags: uninsneveruninstall
+
+; 3. Copy all support DLLs, assets, and folders inside the dist folder
+Source: "dist\OpenHam Logger 0.2.4\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Dirs]
-; CRITICAL: Force the installer to create the empty plugins folder for mods!
+; Force the installer to create the empty plugins folder for mods!
 Name: "{app}\plugins"
 
 [Icons]
-; Create Start Menu shortcut
-Name: "{group}\OpenHam"; Filename: "{app}\OpenHam Logger 0.2.3.exe"
-; Create Desktop shortcut
-Name: "{autodesktop}\OpenHam"; Filename: "{app}\OpenHam Logger 0.2.3.exe"; Tasks: desktopicon
+Name: "{group}\OpenHam"; Filename: "{app}\OpenHam_Logger.exe"
+Name: "{autodesktop}\OpenHam"; Filename: "{app}\OpenHam_Logger.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
