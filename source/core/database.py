@@ -85,3 +85,12 @@ class DatabaseManager:
             cursor.execute(query)
             # Convert rows to standard Python dictionaries
             return [dict(row) for row in cursor.fetchall()]
+
+    def delete_qso(self, qso_id):
+        """Deletes a specific QSO from the log using its database row ID."""
+        query = "DELETE FROM qso_log WHERE id = ?"
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (qso_id,))
+            conn.commit()
+            return cursor.rowcount > 0

@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
                              QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
-                             QInputDialog)
+                             QInputDialog, QMenu)
 from PySide6.QtCore import Qt
 from core.database import DatabaseManager
 from core.api_client import CallsignLookupManager
@@ -155,6 +155,10 @@ class MainWindow(QMainWindow):
         self.history_table.setRowCount(0)
         logs = self.app.db.get_all_qsos()
         
+        # Turn on custom context menus for right-clicking rows
+        self.history_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.history_table.customContextMenuRequested.connect(self.show_context_menu)
+        
         for row_idx, log in enumerate(logs):
             self.history_table.insertRow(row_idx)
             self.history_table.setItem(row_idx, 0, QTableWidgetItem(log["timestamp"]))
@@ -163,3 +167,44 @@ class MainWindow(QMainWindow):
             self.history_table.setItem(row_idx, 3, QTableWidgetItem(log["mode"]))
             self.history_table.setItem(row_idx, 4, QTableWidgetItem(log["rst_sent"]))
             self.history_table.setItem(row_idx, 5, QTableWidgetItem(log["rst_rcvd"]))
+            
+            # CRITICAL: Store the hidden database ID inside the callsign cell's custom data role
+            # This allows us to know exactly which SQL row to delete later!
+            self.history_table.item(row_idx, 1).setData(Qt.ItemDataRole.UserRole, log["id"])
+    
+    def show_context_menu(self, position):
+        """Triggers when a user right-clicks a row in the log view grid."""
+        item = self.history_table.itemAt(position)
+        if not item:
+            return
+            
+        row = item.row()
+        
+        # Pull the hidden database ID out of column 1 (Callsign column)
+        qso_id = self.history_table.item(row, 1).data(Qt.ItemDataRole.UserRole)
+        callsign = self.history_table.item(row, 1).text()
+
+        # Build a native popup menu right under the mouse cursor
+        menu = QMenu()
+        delete_action = menu.addAction(f"Delete QSO with {callsign}")
+        
+        # Execute menu and check if the user clicked delete
+        action = menu.exec(self.history_table.viewport().mapToGlobal(position))
+        if action == delete_action:
+            self.confirm_and_delete_qso(qso_id, callsign)
+
+    def confirm_and_delete_qso(self, qso_id, callsign):
+        """Shows a safety confirmation modal before calling the delete pipe logic."""
+        confirm = QMessageBox.question(
+            self,
+            "Delete Confirmation",
+            f"Are you sure you want to permanently delete the contact with {callsign}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if confirm == QMessageBox.StandardButton.Yes:
+            # Delete from DB backend file
+            self.app.db.delete_qso(qso_id)
+            # Instantly update grid ledger frame overlay display layout
+            self.refresh_log_table()
