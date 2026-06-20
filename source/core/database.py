@@ -1,6 +1,7 @@
 import os
 import sys
 import sqlite3
+from datetime import datetime  # <-- Add this exact line!
 
 class DatabaseManager:
     def __init__(self, db_name="ham_log.db"):
