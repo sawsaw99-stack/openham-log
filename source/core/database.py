@@ -1,19 +1,23 @@
 import os
 import sys
 import sqlite3
-from datetime import datetime  # <-- Add this exact line!
+from datetime import datetime
+
+class DatabaseInitializationError(Exception):
+    pass
 
 class DatabaseManager:
     def __init__(self, db_name="ham_log.db"):
-        # Resolve the folder where the app is executing
         if getattr(sys, 'frozen', False):
-            # Running as a compiled installer .exe
-            app_dir = os.path.dirname(sys.executable)
+            # 1. Target the Windows AppData directory (e.g., C:\Users\Name\AppData\Roaming\OpenHam)
+            base_dir = os.path.join(os.environ["APPDATA"], "OpenHam")
+            # Create the OpenHam folder if it doesn't exist yet
+            os.makedirs(base_dir, exist_ok=True)
         else:
-            # Running during development in your source tree
-            app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # 2. Keep it in your local folder during development
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             
-        self.db_path = os.path.join(app_dir, db_name)
+        self.db_path = os.path.join(base_dir, db_name)
             
         try:
             self.init_db()
@@ -24,7 +28,6 @@ class DatabaseManager:
         return sqlite3.connect(self.db_path)
 
     def init_db(self):
-        """Creates the QSO table if it doesn't exist yet."""
         query = """
         CREATE TABLE IF NOT EXISTS qso_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
