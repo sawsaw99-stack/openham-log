@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
                              QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
-                             QInputDialog, QMenu)
+                             QInputDialog, QMenu, QMessageBox)
 from PySide6.QtCore import Qt
 from core.database import DatabaseManager
 from core.api_client import CallsignLookupManager
