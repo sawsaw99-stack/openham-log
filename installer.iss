@@ -4,13 +4,13 @@ AppVersion=0.2.5
 DefaultDirName={autopf}\OpenHam
 DefaultGroupName=OpenHam
 OutputDir=.\releases
-OutputBaseFilename=OpenHam_Setup
+OutputBaseFilename=OpenHam_Setup_0.2.5
 Compression=lzma
 SolidCompression=yes
 
 [Files]
 ; 1. Copy the main executable
-Source: "dist\OpenHam Logger 0.2.5\OpenHam_Logger.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\OpenHam Logger 0.2.5\OpenHam Logger 0.2.5.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; 2. CRITICAL: Bundle your starter/template database file into the installation folder!
 ; 'uninsneveruninstall' ensures that if the user updates or uninstalls the app later, 
@@ -25,8 +25,8 @@ Source: "dist\OpenHam Logger 0.2.5\*"; DestDir: "{app}"; Flags: ignoreversion re
 Name: "{app}\plugins"
 
 [Icons]
-Name: "{group}\OpenHam"; Filename: "{app}\OpenHam_Logger.exe"
-Name: "{autodesktop}\OpenHam"; Filename: "{app}\OpenHam_Logger.exe"; Tasks: desktopicon
+Name: "{group}\OpenHam"; Filename: "{app}\OpenHam_Logger 0.2.5.exe"
+Name: "{autodesktop}\OpenHam"; Filename: "{app}\OpenHam_Logger 0.2.5.exe"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
