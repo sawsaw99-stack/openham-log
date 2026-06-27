@@ -1,9 +1,10 @@
-import sys
+import sys, os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, 
                              QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
                              QInputDialog, QMenu, QMessageBox)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 from core.database import DatabaseManager
 from core.api_client import CallsignLookupManager
 from core.geo_math import GeoMath
@@ -14,6 +15,16 @@ class MainWindow(QMainWindow):
         self.app = app_context
         self.setWindowTitle("Ham Radio Logger & Tracker")
         self.resize(1100, 650)
+
+        if getattr(sys, 'frozen', False):
+            # When frozen, PyInstaller extracts resources to sys._MEIPASS
+            icon_path = os.path.join(sys._MEIPASS, "logo.ico")
+        else:
+            # Local development path
+            icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.ico")
+            
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
 
         # Central Widget & Main Layout
         central_widget = QWidget()

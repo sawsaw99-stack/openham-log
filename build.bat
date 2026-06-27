@@ -1,2 +1,2 @@
-python -m PyInstaller --noconsole --noconfirm --name="OpenHam Logger 0.3.6" source/main.py
+python -m PyInstaller --noconsole --noconfirm --add-data "source/gui/logo.ico;." --icon="source/gui/logo.ico" --name="OpenHam Logger 0.4.0" source/main.py
 "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
