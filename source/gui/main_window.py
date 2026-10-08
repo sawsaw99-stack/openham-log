@@ -4,10 +4,108 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTableWidget, QTableWidgetItem, QHeaderView, QGroupBox,
                              QInputDialog, QMenu, QMessageBox)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QPainter, QPen, QColor, QFont
 from core.database import DatabaseManager
 from core.api_client import CallsignLookupManager
 from core.geo_math import GeoMath
+
+class MapWidget(QWidget):
+    """Simple 2D visualization showing home station and remote station with great-circle path."""
+    def __init__(self):
+        super().__init__()
+        self.home_lat = None
+        self.home_lon = None
+        self.dx_lat = None
+        self.dx_lon = None
+        self.distance = 0.0
+        self.bearing = 0.0
+        self.home_name = ""
+        self.dx_name = ""
+        self.setMinimumHeight(300)
+    
+    def update_map(self, home_lat, home_lon, dx_lat, dx_lon, distance, bearing, home_name, dx_name):
+        """Updates the map with new position data."""
+        self.home_lat = home_lat
+        self.home_lon = home_lon
+        self.dx_lat = dx_lat
+        self.dx_lon = dx_lon
+        self.distance = distance
+        self.bearing = bearing
+        self.home_name = home_name
+        self.dx_name = dx_name
+        self.update()  # Trigger repaint
+    
+    def paintEvent(self, event):
+        """Custom paint event to draw the map."""
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        w, h = self.width(), self.height()
+        
+        # Draw background
+        painter.fillRect(event.rect(), QColor(240, 240, 240))
+        
+        # If no data, show placeholder
+        if self.home_lat is None or self.dx_lat is None:
+            painter.setFont(QFont("Arial", 12))
+            painter.drawText(event.rect(), Qt.AlignmentFlag.AlignCenter, 
+                           "Enter a callsign to see map path")
+            return
+        
+        # Map center and scale
+        center_x, center_y = w // 2, h // 2
+        scale = 100  # pixels per degree
+        
+        # Draw world grid background
+        painter.setPen(QPen(QColor(200, 200, 200), 1, Qt.PenStyle.DashLine))
+        for lat in range(-90, 91, 30):
+            y = center_y - (lat * scale)
+            painter.drawLine(0, y, w, y)
+        for lon in range(-180, 181, 30):
+            x = center_x + (lon * scale / 2)  # Wider longitude spacing
+            painter.drawLine(x, 0, x, h)
+        
+        # Calculate screen positions (simplified flat map projection)
+        home_x = center_x + (self.home_lon * scale / 2)
+        home_y = center_y - (self.home_lat * scale)
+        dx_x = center_x + (self.dx_lon * scale / 2)
+        dx_y = center_y - (self.dx_lat * scale)
+        
+        # Draw great-circle path line
+        painter.setPen(QPen(QColor(0, 100, 200), 2))
+        painter.drawLine(int(home_x), int(home_y), int(dx_x), int(dx_y))
+        
+        # Draw home station (green circle)
+        painter.setPen(QPen(QColor(0, 150, 0), 2))
+        painter.setBrush(QColor(0, 200, 0, 100))
+        painter.drawEllipse(int(home_x - 8), int(home_y - 8), 16, 16)
+        
+        # Draw remote station (red circle)
+        painter.setPen(QPen(QColor(200, 0, 0), 2))
+        painter.setBrush(QColor(255, 0, 0, 100))
+        painter.drawEllipse(int(dx_x - 8), int(dx_y - 8), 16, 16)
+        
+        # Draw bearing line (antenna heading from home)
+        painter.setPen(QPen(QColor(255, 150, 0), 2))
+        bearing_rad = (self.bearing * 3.14159) / 180
+        arrow_len = 60
+        arrow_x = home_x + arrow_len * __import__('math').sin(bearing_rad)
+        arrow_y = home_y - arrow_len * __import__('math').cos(bearing_rad)
+        painter.drawLine(int(home_x), int(home_y), int(arrow_x), int(arrow_y))
+        
+        # Draw labels
+        painter.setFont(QFont("Arial", 9, QFont.Weight.Bold))
+        painter.setPen(QPen(QColor(0, 0, 0), 1))
+        painter.drawText(int(home_x - 30), int(home_y - 25), 60, 20, 
+                        Qt.AlignmentFlag.AlignCenter, f"{self.home_name}\n(Home)")
+        painter.drawText(int(dx_x - 30), int(dx_y + 15), 60, 20, 
+                        Qt.AlignmentFlag.AlignCenter, f"{self.dx_name}")
+        
+        # Draw info box
+        info_text = f"Distance: {self.distance} km ({round(self.distance*0.621, 1)} mi)\nBearing: {self.bearing}°"
+        painter.setFont(QFont("Arial", 10))
+        painter.setPen(QPen(QColor(0, 0, 0), 1))
+        painter.drawText(10, 10, w - 20, 40, Qt.TextFlag.TextWordWrap, info_text)
 
 class MainWindow(QMainWindow):
     def __init__(self, app_context):
@@ -69,12 +167,11 @@ class MainWindow(QMainWindow):
         
         top_layout.addWidget(form_group, 1)
 
-        # 2. Map / Telemetry Pane Group
+        # 2. Map / Telemetry Pane Group with actual map widget
         map_group = QGroupBox("Path Tracker & Beam Heading")
-        self.map_layout = QVBoxLayout(map_group)
-        self.telemetry_label = QLabel("Enter a callsign to calculate path info...")
-        self.telemetry_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.map_layout.addWidget(self.telemetry_label)
+        map_group_layout = QVBoxLayout(map_group)
+        self.map_widget = MapWidget()
+        map_group_layout.addWidget(self.map_widget)
         
         top_layout.addWidget(map_group, 2)
         main_layout.addLayout(top_layout, 1)
@@ -109,10 +206,6 @@ class MainWindow(QMainWindow):
 
         if ok and callsign.strip():
             self.app.refresh_home_location(callsign)
-            self.telemetry_label.setText(
-                f"<b>Home Station:</b> {self.app.home_callsign}<br>"
-                f"<b>Reference Grid:</b> {self.app.home_grid}"
-            )
 
     def handle_lookup(self):
         """Runs an automatic background API check as soon as callsign field is exited."""
@@ -131,12 +224,13 @@ class MainWindow(QMainWindow):
             self.app.home_lat, self.app.home_lon, dx_lat, dx_lon
         )
 
-        # Update HUD Text Panel
-        self.telemetry_label.setText(
-            f"<b>Station:</b> {info['name']}<br>"
-            f"<b>Country:</b> {info['country']} ({info['grid'] or 'Unknown Grid'})<br>"
-            f"<b>Distance:</b> {distance} km ({round(distance*0.621, 1)} miles)<br>"
-            f"<b>Antenna Heading:</b> {bearing}°"
+        # Update the map widget with the new path
+        self.map_widget.update_map(
+            self.app.home_lat, self.app.home_lon,
+            dx_lat, dx_lon,
+            distance, bearing,
+            self.app.home_callsign or "Home",
+            info.get('name', callsign)
         )
 
     def handle_log_qso(self):
